@@ -13,8 +13,8 @@ jobs:
       - name: Run deploy.sh at server
         uses: appleboy/ssh-action@v0.1.9
         with:
-          key: ${{ secrets.SSH_KEY }}
-          host: ${{ secrets.HOST }}
+          key: ${{ secrets.SANDBOX_SSH_KEY }}
+          host: ${{ secrets.SANDBOX_HOST }}
           username: ubuntu
           script: |
             sh deploy.sh
