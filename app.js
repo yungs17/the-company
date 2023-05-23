@@ -1,6 +1,9 @@
-require("dotenv").config();
+import pkg from "@slack/bolt";
+const { App } = pkg;
+import { config } from "dotenv";
+import * as appBuilder from "./Jonathan/utils/appBuilder.js";
 
-const { App } = require("@slack/bolt");
+config();
 
 const app = new App({
   token: process.env.SLACK_BOT_TOKEN,
@@ -8,13 +11,9 @@ const app = new App({
 });
 
 (async () => {
-  // Start your app
   await app.start(8080);
+
+  await appBuilder.registerCommands(app);
 
   console.log("Jonathan On");
 })();
-
-app.command("/test", async ({ ack }) => {
-  await ack();
-  console.log("req received");
-});
