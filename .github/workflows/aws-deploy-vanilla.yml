@@ -11,7 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Run deploy.sh at server
-        uses: appleboy/ssh-action@master
+        uses: appleboy/ssh-action@v0.1.9
         with:
           key: ${{ secrets.SSH_KEY }}
           host: ${{ secrets.HOST }}
