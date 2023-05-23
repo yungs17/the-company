@@ -2,7 +2,7 @@ import fs from "fs/promises";
 import path from "path";
 
 const registerCommands = async (app) => {
-  const commandsDir = path.resolve("./jonathan/commands");
+  const commandsDir = path.resolve("./Jonathan/commands");
   const filenames = await fs.readdir(commandsDir);
 
   await Promise.all(
