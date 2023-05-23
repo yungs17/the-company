@@ -1,7 +1,7 @@
 import pkg from "@slack/bolt";
-const { App } = pkg;
 import { config } from "dotenv";
 import * as appBuilder from "./Jonathan/utils/appBuilder.js";
+const { App } = pkg;
 
 config();
 
