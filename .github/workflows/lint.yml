@@ -19,4 +19,4 @@ jobs:
           cache: "npm"
       - run: npm ci
       - run: npm run eslint
-      - run: npm run prettier:fix
+      - run: npm run prettier
