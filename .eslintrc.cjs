@@ -17,7 +17,7 @@ module.exports = {
   rules: {
     "node/no-unsupported-features/es-syntax": [
       "error",
-      { ignores: ["modules", "import"] },
+      { ignores: ["modules", "dynamicImport"] },
     ],
     "node/no-missing-import": ["off"],
   },
