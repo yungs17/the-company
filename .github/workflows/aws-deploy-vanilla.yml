@@ -1,33 +1,20 @@
-# This workflow will do a clean install of node dependencies, cache/restore them, build the source code and run tests across different versions of node
-# For more information see: https://help.github.com/actions/language-and-framework-guides/using-nodejs-with-github-actions
-
-name: Deploy using
+name: Deploy
 
 on:
   push:
     branches: [main]
 
 jobs:
-  build-and-deploy:
-    runs-on: ubuntu-20.04
-
-    strategy:
-      matrix:
-        node-version: [18.16.0]
-        # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
+  deploy:
+    runs-on: ubuntu-latest
 
     steps:
-      - name: ✅ 체크아웃 source code.
-        uses: actions/checkout@v3
-
-      - name: Run scripts in server
+      - uses: actions/checkout@v3
+      - name: Run deploy.sh at server
         uses: appleboy/ssh-action@master
         with:
           key: ${{ secrets.SSH_KEY }}
           host: ${{ secrets.HOST }}
           username: ubuntu
           script: |
-            cd server
-            git reset --hard
-            git fetch
-            git pull
+            sh deploy.sh
