@@ -1,0 +1,41 @@
+{
+  "name": "the-company",
+  "version": "1.0.0",
+  "description": "POC of fully AI-employeed task force",
+  "main": "app.js",
+  "scripts": {
+    "eslint": "eslint *.js",
+    "eslint:fix": "eslint *.{js} --fix",
+    "prettier": "prettier **/*.{json,md} --check",
+    "prettier:fix": "prettier **/*.{json,md} --write",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yungs17/the-company.git"
+  },
+  "keywords": [
+    "autonomous_agents"
+  ],
+  "author": "yungs17",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/yungs17/the-company/issues"
+  },
+  "homepage": "https://github.com/yungs17/the-company#readme",
+  "devDependencies": {
+    "chai": "^4.3.7",
+    "eslint": "^8.28.0",
+    "eslint-config-prettier": "^8.5.0",
+    "eslint-config-standard": "^17.0.0",
+    "eslint-plugin-import": "^2.26.0",
+    "eslint-plugin-node": "^11.1.0",
+    "eslint-plugin-prettier": "^4.2.1",
+    "eslint-plugin-promise": "^6.1.1",
+    "prettier": "^2.8.0"
+  },
+  "dependencies": {
+    "@slack/bolt": "^3.13.1",
+    "dotenv": "^16.0.3"
+  }
+}
