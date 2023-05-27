@@ -9,12 +9,13 @@ class AppBuilder {
 
   async registerCommands() {
     const filenames = await fs.readdir(this.commandsDir);
+    console.log("⚡️Registering Slack commands");
 
     await Promise.all(
       filenames.map(async (filename) => {
         if (filename === "index.js") return;
         const moduleName = path.basename(filename, ".js");
-        console.log("Registering slack command: " + moduleName);
+        console.log("  " + moduleName);
         const modulePath = `${this.commandsDir}/${filename}`;
         const commandModule = await import(modulePath);
         this.app.command(`/${moduleName}`, commandModule.default);
