@@ -19,6 +19,7 @@ class SlackHandler {
 
       return conversationId;
     } catch (err) {
+      console.error(Date() + "\n");
       console.error(err);
     }
   }
@@ -42,6 +43,7 @@ class SlackHandler {
 
       return result;
     } catch (err) {
+      console.error(Date() + "\n");
       console.error(err);
     }
   }
@@ -58,6 +60,7 @@ class SlackHandler {
 
       return result;
     } catch (err) {
+      console.error(Date() + "\n");
       console.error(err);
     }
   }
