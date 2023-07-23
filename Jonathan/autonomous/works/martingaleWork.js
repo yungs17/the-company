@@ -164,7 +164,7 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
             positionRowData.TPPercent = normalRatio * (isBuy ? 1 : -1);
             positionRowData.SL = slOrder.stopPrice;
             positionRowData.SLPercent = normalRatio * (isBuy ? -1 : 1);
-            positionRowData.Data = `Leverage: ${leverage}\nTP: ${tpOrder.stopPrice}\nSL: ${slOrder.stopPrice}`;
+            positionRowData.Data = `Leverage: ${leverage}  TP: ${tpOrder.stopPrice}  SL: ${slOrder.stopPrice}`;
 
             isPositionLog = true;
             isRoundLog = true;
