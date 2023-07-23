@@ -2,13 +2,13 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
   const now = new Date();
   const slackChannelId = await slackHandler.findConversation("trading-test");
   const feeRate = 0.0003;
-  const tempInitialBalance = 92;
+  const tempInitialBalance = 82.5;
   const ticker = "XRPBUSD";
   const tickerWithSlash = "XRP/BUSD";
   const currency = "BUSD";
   const timeframe = "15m";
-  const tagetVolatilityMin = 0.006;
-  const tagetVolatilityMax = 0.0085;
+  const tagetVolatilityMin = 0.005;
+  const tagetVolatilityMax = 0.0088;
 
   try {
     // 스크립트처럼 돌아가야함 1회성.
@@ -43,6 +43,7 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
       Stage: 0,
       BuyWeight: 0,
       SellWeight: 0,
+      Price: 0,
     };
     const roundRowData = {
       "Round #": 0,
@@ -137,7 +138,7 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
             // amount 결정하고, sltp 결정
             const targetBalance = tempInitialBalance * 1.0103 * 0.865 ** i;
             const normalRatio = targetBalance / remainingBalance - 1;
-            const leverage = smallestDivisor(normalRatio, tagetVolatilityMin, tagetVolatilityMax);
+            const leverage = Math.min(smallestDivisor(normalRatio, tagetVolatilityMin, tagetVolatilityMax), 19);
             await binanceHandler.setLeverage(leverage, ticker);
 
             const amount = +((remainingBalance * 0.99 * (1 - feeRate)) / price) * leverage;
@@ -170,6 +171,7 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
             // Position Open 로깅 데이터 생성
             positionRowData.Type = "Entry";
             positionRowData.Side = newSide;
+            positionRowData.Price = price;
             positionRowData["Entry Liquidity"] = order.cost;
             positionRowData.Leverage = leverage;
             positionRowData.TP = tpOrder.stopPrice;
@@ -231,12 +233,12 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
           : "\nAmount: " + positionRowData["Exit Liquidity"].toFixed(2)
       } ${
         isPositionClosed === false
-          ? "Side: " +
+          ? "\nSide: " +
             positionRowData.Side +
             " (" +
-            positionRowData.BuyWeight +
+            positionRowData.BuyWeight.toFixed(2) +
             " : " +
-            positionRowData.SellWeight +
+            positionRowData.SellWeight.toFixed(2) +
             ")" +
             "\nPrice: $" +
             positionRowData.price +
