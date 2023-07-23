@@ -1,6 +1,6 @@
 import * as mysql from "mysql";
 import util from "util";
-import { Task } from "../autonomous/taskModel.js";
+import { Task } from "./Jonathan/autonomous/TaskModel.js";
 
 const LogType = {
   ADDTASK: 0,

@@ -1,4 +1,5 @@
 import doNothingWork from "./works/doNothingWork.js";
+import martingaleWork from "./works/martingaleWork.js";
 
 class TaskHandler {
   checkExecutable(task) {
@@ -20,6 +21,10 @@ class TaskHandler {
 
       case "SYSTEM":
         // TODO: implement
+        break;
+
+      case "MARTINGALE":
+        await martingaleWork(task.data.slackHandler, task.data.excelHandler, task.data.binanceHandler);
         break;
 
       case "DONOTHING":

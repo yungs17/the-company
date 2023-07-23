@@ -2,6 +2,7 @@ const TaskType = {
   GPT: "GPT",
   SLACK: "SLACK",
   SYSTEM: "SYSTEM",
+  MARTINGALE: "MARTINGALE",
   DONOTHING: "DONOTHING",
 };
 
