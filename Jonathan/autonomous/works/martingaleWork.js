@@ -339,7 +339,7 @@ function smallestDivisor(num) {
   while (true) {
     const result = num / i;
     // target volatility = 0.5% ~ 0.8%
-    if (result >= 0.005 && result <= 0.008) {
+    if (result >= 0.005 && result <= 0.0065) {
       return i;
     }
     i++;
