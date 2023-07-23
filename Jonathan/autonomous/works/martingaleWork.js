@@ -2,13 +2,13 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
   const now = new Date();
   const slackChannelId = await slackHandler.findConversation("trading-test");
   const feeRate = 0.0003;
-  const tempInitialBalance = 100;
-  const ticker = "APTBUSD";
-  const tickerWithSlash = "APT/BUSD";
+  const tempInitialBalance = 92;
+  const ticker = "XRPBUSD";
+  const tickerWithSlash = "XRP/BUSD";
   const currency = "BUSD";
   const timeframe = "15m";
-  const tagetVolatilityMin = 0.005;
-  const tagetVolatilityMax = 0.008;
+  const tagetVolatilityMin = 0.006;
+  const tagetVolatilityMax = 0.0085;
 
   try {
     // 스크립트처럼 돌아가야함 1회성.
@@ -66,10 +66,7 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
     if (initialOrder || orderHistory.length > 0) {
       const lastOrder = orderHistory[orderHistory.length - 1];
       const secondLastOrder = orderHistory[orderHistory.length - 2];
-      const remainingBalance = (await binanceHandler.fetchBalance({ currency, type: "future" }))[currency].free;
       if (!initialOrder && lastOrder.timestamp >= new Date().getTime() - 5000 && lastOrder.remaining === 0 && lastOrder.reduceOnly) {
-        isPositionClosed = true;
-
         await binanceHandler.cancelAllOrders(tickerWithSlash);
 
         // pnl 계산
@@ -85,11 +82,10 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
         const openFee = openPrice * quantity * feeRate;
         const closeFee = closePrice * quantity * feeRate;
 
-        let pnl = (closePrice - openPrice) * (isBuy ? 1 : -1) * quantity - openFee - closeFee;
+        const pnl = (closePrice - openPrice) * (isBuy ? 1 : -1) * quantity - openFee - closeFee;
 
         // vault 옮기기
         if (pnl > 0) {
-          pnl = Math.max(pnl, remainingBalance - tempInitialBalance);
           await binanceHandler.futuresTransfer(currency, pnl, 2);
 
           // Round Close 로깅 생성 트리거
@@ -105,9 +101,11 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
         positionRowData.PNL = pnl;
 
         isPositionLog = true;
+        isPositionClosed = true;
 
         //
       } else if (initialOrder || (lastOrder.remaining === 0 && lastOrder.reduceOnly)) {
+        isPositionLog = true;
         // 포지션 엔트리 로깅 데이터 생성. 이전 pnl이 +면 라운드 엔트리 생성.
         const k = (await binanceHandler.getStochRSI(14, ticker, timeframe)).k;
         const adx = (await binanceHandler.getADX(12, ticker, timeframe)).adx;
@@ -127,9 +125,11 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
         const isBuy = newSide === "buy";
         const contraNewSide = isBuy ? "sell" : "buy";
 
+        const remainingBalance = (await binanceHandler.fetchBalance({ currency, type: "future" }))[currency].free;
+
         for (let i = 0; i < 4; i++) {
           const minBorder = tempInitialBalance * 0.865 ** (i + 1);
-          const maxBorder = Math.max(tempInitialBalance * 0.865 ** i, remainingBalance);
+          const maxBorder = i === 0 ? Math.max(tempInitialBalance * 0.865 ** i, remainingBalance) : tempInitialBalance * 0.865 ** i;
           if (minBorder <= remainingBalance && remainingBalance <= maxBorder) {
             // TODO: Stage 이후 추가
             positionRowData.Stage = i;
@@ -152,13 +152,20 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
               stopPrice: tpPrice,
               reduceOnly: true,
             });
-            const slOrder = await binanceHandler.createOrder(ticker, "stop_market", contraNewSide, amount, tpPrice, {
+            const slOrder = await binanceHandler.createOrder(ticker, "stop_market", contraNewSide, amount, slPrice, {
               stopPrice: slPrice,
               reduceOnly: true,
             });
+
             console.log("New Order Delivered!");
-            console.log(leverage, price, amount, amount * price, newSide);
-            console.log(tpPrice, slPrice, normalRatio, 1 + normalRatio / leverage, 1 - normalRatio / leverage);
+            console.log(leverage, price, amount.toFixed(2), (amount * price).toFixed(2), ((amount * price) / leverage).toFixed(2), newSide);
+            console.log(
+              tpPrice.toFixed(2),
+              slPrice.toFixed(2),
+              (normalRatio / leverage).toFixed(2),
+              (1 + normalRatio / leverage).toFixed(2),
+              (1 - normalRatio / leverage).toFixed(2)
+            );
 
             // Position Open 로깅 데이터 생성
             positionRowData.Type = "Entry";
@@ -172,7 +179,7 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
             positionRowData.Data = `Leverage: ${leverage}  TP: ${tpOrder.stopPrice}  SL: ${slOrder.stopPrice}`;
 
             isPositionLog = true;
-            isRoundLog = true;
+            break;
           }
         }
       } else {
@@ -181,6 +188,7 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
     }
 
     let roundNumber = 1;
+
     if (isPositionLog) {
       // 포지션 로그에 추가해야하는 정보들 준비
       let positionNumber = 1;
