@@ -310,7 +310,7 @@ function chooseSide(price, upperBand, middleBand, lowerBand, adx, stochRsiK) {
   let bbBuyWeight = Math.max(0, 1 - positionBB);
   let bbSellWeight = Math.max(0, positionBB);
 
-  const adxNormalized = Math.min(adx / 50, 1);
+  const adxNormalized = Math.min(adx / 40, 1);
 
   let rsiBuyWeight = Math.max(0, (80 - stochRsiK) / 80);
   let rsiSellWeight = Math.max(0, stochRsiK / 80);
