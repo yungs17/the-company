@@ -65,6 +65,7 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
       initialOrder = true;
     }
     if (initialOrder || orderHistory.length > 0) {
+      const remainingBalance = (await binanceHandler.fetchBalance({ currency, type: "future" }))[currency].free;
       const lastOrder = orderHistory[orderHistory.length - 1];
       const secondLastOrder = orderHistory[orderHistory.length - 2];
       if (!initialOrder && lastOrder.timestamp >= new Date().getTime() - 5000 && lastOrder.remaining === 0 && lastOrder.reduceOnly) {
@@ -80,13 +81,15 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
 
         const isBuy = openOrder.side === "buy";
 
-        const openFee = openPrice * quantity * feeRate;
         const closeFee = closePrice * quantity * feeRate;
 
-        const pnl = (closePrice - openPrice) * (isBuy ? 1 : -1) * quantity - openFee - closeFee;
+        let pnl = (closePrice - openPrice) * (isBuy ? 1 : -1) * quantity - closeFee;
 
         // vault 옮기기
         if (pnl > 0) {
+          if (remainingBalance > tempInitialBalance) {
+            pnl = remainingBalance - tempInitialBalance;
+          }
           await binanceHandler.futuresTransfer(currency, pnl, 2);
 
           // Round Close 로깅 생성 트리거
@@ -125,8 +128,6 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
         positionRowData.SellWeight = cs.sellWeight;
         const isBuy = newSide === "buy";
         const contraNewSide = isBuy ? "sell" : "buy";
-
-        const remainingBalance = (await binanceHandler.fetchBalance({ currency, type: "future" }))[currency].free;
 
         for (let i = 0; i < 4; i++) {
           const minBorder = tempInitialBalance * 0.865 ** (i + 1);
