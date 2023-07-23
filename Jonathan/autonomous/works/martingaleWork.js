@@ -295,7 +295,7 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
         // isRoundClosed === true ? "  Vault Delta: " + roundRowData["Vault Delta"] + "\n Counts: " + (Math.floor(rowCount / 2) + 1) : ""
       }`;
 
-      const chatAttachment = slackHandler.createChatAttachment(contentText, isRoundClosed ? "#008000" : "#FF0000");
+      const chatAttachment = slackHandler.createChatAttachment(contentText, isRoundClosed ? "#FF0000" : "#008000");
 
       await slackHandler.publishMessage(slackChannelId, chatAlarm, chatAttachment);
     }
