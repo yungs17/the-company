@@ -5,11 +5,12 @@ class AppBuilder {
   constructor(app) {
     this.app = app;
     this.commandsDir = path.resolve("./Jonathan/commands");
+    console.log("⚡️Initializing App");
   }
 
   async registerCommands() {
     const filenames = await fs.readdir(this.commandsDir);
-    console.log("⚡️Registering Slack commands");
+    console.log("Registering Slack commands");
 
     await Promise.all(
       filenames.map(async (filename) => {

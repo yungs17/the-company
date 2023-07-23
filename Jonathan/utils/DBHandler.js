@@ -23,9 +23,7 @@ class DBHandler {
     this.connection = mysql.createConnection(config);
     this.query = util.promisify(this.connection.query).bind(this.connection);
     this.log = async (log) => {
-      await this.query(
-        `write id auto-generated, ${log.type}, ${log.data}, ${log.createdAt}`
-      );
+      await this.query(`write id auto-generated, ${log.type}, ${log.data}, ${log.createdAt}`);
     };
   }
 
@@ -40,19 +38,8 @@ class DBHandler {
   }
 
   async getAllTasks() {
-    const tasks = await this.query(
-      `get all tasks that are valid (not soft removed) from sql`
-    );
-    return tasks.map(
-      (taskData) =>
-        new Task(
-          taskData.id,
-          taskData.type,
-          taskData.when,
-          taskData.data,
-          taskData.createdAt
-        )
-    );
+    const tasks = await this.query(`get all tasks that are valid (not soft removed) from sql`);
+    return tasks.map((taskData) => new Task(taskData.id, taskData.type, taskData.when, taskData.data, taskData.createdAt));
   }
 }
 
