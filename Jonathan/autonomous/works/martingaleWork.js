@@ -7,6 +7,9 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
   const tickerWithSlash = "APT/BUSD";
   const currency = "BUSD";
   const timeframe = "15m";
+  const tagetVolatilityMin = 0.005;
+  const tagetVolatilityMax = 0.008;
+
   try {
     // 스크립트처럼 돌아가야함 1회성.
 
@@ -63,6 +66,7 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
     if (initialOrder || orderHistory.length > 0) {
       const lastOrder = orderHistory[orderHistory.length - 1];
       const secondLastOrder = orderHistory[orderHistory.length - 2];
+      const remainingBalance = (await binanceHandler.fetchBalance({ currency, type: "future" }))[currency].free;
       if (!initialOrder && lastOrder.timestamp >= new Date().getTime() - 5000 && lastOrder.remaining === 0 && lastOrder.reduceOnly) {
         isPositionClosed = true;
 
@@ -81,10 +85,11 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
         const openFee = openPrice * quantity * feeRate;
         const closeFee = closePrice * quantity * feeRate;
 
-        const pnl = (closePrice - openPrice) * (isBuy ? 1 : -1) * quantity - openFee - closeFee;
+        let pnl = (closePrice - openPrice) * (isBuy ? 1 : -1) * quantity - openFee - closeFee;
 
         // vault 옮기기
         if (pnl > 0) {
+          pnl = Math.max(pnl, remainingBalance - tempInitialBalance);
           await binanceHandler.futuresTransfer(currency, pnl, 2);
 
           // Round Close 로깅 생성 트리거
@@ -93,7 +98,7 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
         }
 
         // Position Exit 로깅 생성
-        positionRowData.Type = "Entry";
+        positionRowData.Type = "Exit";
         positionRowData.Side = closeOrder.side;
         positionRowData.Success = pnl > 0;
         positionRowData["Exit Liquidity"] = closeOrder.cost;
@@ -113,7 +118,7 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
 
         const data = await binanceHandler.fetchOHLCVFormatted(ticker, timeframe);
 
-        const price = data.close[data.close.length - 1];
+        let price = data.close[data.close.length - 1];
 
         const cs = chooseSide(price, bbUpper, bbMiddle, bbLower, adx, k);
         const newSide = cs.side;
@@ -122,29 +127,26 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
         const isBuy = newSide === "buy";
         const contraNewSide = isBuy ? "sell" : "buy";
 
-        const remainingBalance = (await binanceHandler.fetchBalance({ currency, type: "future" }))[currency].free;
-
         for (let i = 0; i < 4; i++) {
-          if (tempInitialBalance * 0.865 ** (i + 1) <= remainingBalance && remainingBalance <= tempInitialBalance * 0.865 ** i) {
+          const minBorder = tempInitialBalance * 0.865 ** (i + 1);
+          const maxBorder = Math.max(tempInitialBalance * 0.865 ** i, remainingBalance);
+          if (minBorder <= remainingBalance && remainingBalance <= maxBorder) {
             // TODO: Stage 이후 추가
             positionRowData.Stage = i;
 
             // amount 결정하고, sltp 결정
-            const targetBalance = tempInitialBalance * 1.01 * 0.865 ** i;
+            const targetBalance = tempInitialBalance * 1.0103 * 0.865 ** i;
             const normalRatio = targetBalance / remainingBalance - 1;
-            const leverage = smallestDivisor(normalRatio);
-
-            const tpPrice = isBuy ? price * (1 + normalRatio / leverage) : price * (1 - normalRatio / leverage);
-            const slPrice = isBuy ? price * (1 - normalRatio / leverage) : price * (1 + normalRatio / leverage);
+            const leverage = smallestDivisor(normalRatio, tagetVolatilityMin, tagetVolatilityMax);
+            await binanceHandler.setLeverage(leverage, ticker);
 
             const amount = +((remainingBalance * 0.99 * (1 - feeRate)) / price) * leverage;
 
-            // set leverage, make 3 orders;
-            await binanceHandler.setLeverage(leverage, ticker);
-            console.log("New Order Delivered!");
-            console.log(leverage, price, amount, amount * price, newSide);
-            console.log(tpPrice, slPrice, normalRatio, 1 + normalRatio / leverage, 1 - normalRatio / leverage);
             const order = await binanceHandler.createOrder(ticker, "market", newSide, amount);
+            price = order.price;
+
+            const tpPrice = isBuy ? price * (1 + normalRatio / leverage) : price * (1 - normalRatio / leverage);
+            const slPrice = isBuy ? price * (1 - normalRatio / leverage) : price * (1 + normalRatio / leverage);
 
             const tpOrder = await binanceHandler.createOrder(ticker, "take_profit_market", contraNewSide, amount, tpPrice, {
               stopPrice: tpPrice,
@@ -154,6 +156,9 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
               stopPrice: slPrice,
               reduceOnly: true,
             });
+            console.log("New Order Delivered!");
+            console.log(leverage, price, amount, amount * price, newSide);
+            console.log(tpPrice, slPrice, normalRatio, 1 + normalRatio / leverage, 1 - normalRatio / leverage);
 
             // Position Open 로깅 데이터 생성
             positionRowData.Type = "Entry";
@@ -252,7 +257,7 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
             "%)"
       }`;
 
-      const chatAttachment = slackHandler.createChatAttachment(contentText, positionRowData.Side === "SELL" ? "#58D68D" : "#DC7633");
+      const chatAttachment = slackHandler.createChatAttachment(contentText, isPositionClosed ? "#CC0000" : "#00C851");
 
       //
       await slackHandler.publishMessage(slackChannelId, chatAlarm, chatAttachment);
@@ -279,7 +284,7 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
         // isRoundClosed === true ? "  Vault Delta: " + roundRowData["Vault Delta"] + "\n Counts: " + (Math.floor(rowCount / 2) + 1) : ""
       }`;
 
-      const chatAttachment = slackHandler.createChatAttachment(contentText, positionRowData.Side === "SELL" ? "#2eeb84" : "#e85100");
+      const chatAttachment = slackHandler.createChatAttachment(contentText, isRoundClosed ? "#008000" : "#FF0000");
 
       await slackHandler.publishMessage(slackChannelId, chatAlarm, chatAttachment);
     }
@@ -334,12 +339,11 @@ function chooseSide(price, upperBand, middleBand, lowerBand, adx, stochRsiK) {
   }
 }
 
-function smallestDivisor(num) {
+function smallestDivisor(num, min, max) {
   let i = 1;
   while (true) {
     const result = num / i;
-    // target volatility = 0.5% ~ 0.8%
-    if (result >= 0.005 && result <= 0.0065) {
+    if (result >= min && result <= max) {
       return i;
     }
     i++;
