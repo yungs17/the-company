@@ -128,7 +128,7 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
 
         for (let i = 0; i < 4; i++) {
           if (tempInitialBalance * 0.865 ** (i + 1) <= remainingBalance && remainingBalance <= tempInitialBalance * 0.865 ** i) {
-            // Stage 체크
+            // TODO: Stage 이후 추가
             positionRowData.Stage = i;
 
             // amount 결정하고, sltp 결정
