@@ -18,8 +18,31 @@ class SlackHandler {
       }
 
       return conversationId;
-    } catch (error) {
-      console.error(error);
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  async publishText(channelId, text) {
+    try {
+      const result = await this.app.client.chat.postMessage({
+        token: process.env.SLACK_BOT_TOKEN,
+        channel: channelId,
+        blocks: [
+          {
+            type: "section",
+            text: {
+              type: "mrkdwn",
+              text,
+            },
+          },
+        ],
+        text: "A message from Jonathan",
+      });
+
+      return result;
+    } catch (err) {
+      console.error(err);
     }
   }
 
@@ -35,7 +58,7 @@ class SlackHandler {
 
       return result;
     } catch (err) {
-      console.error(Date() + "\n" + err);
+      console.error(err);
     }
   }
 

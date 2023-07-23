@@ -1,16 +1,16 @@
 const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
+  const now = new Date();
+  const slackChannelId = await slackHandler.findConversation("trading-test");
+  const feeRate = 0.0003;
+  const tempInitialBalance = 100;
+  const ticker = "APTBUSD";
+  const tickerWithSlash = "APT/BUSD";
+  const currency = "BUSD";
+  const timeframe = "15m";
   try {
     // 스크립트처럼 돌아가야함 1회성.
 
     // constants
-    const now = new Date();
-    const slackChannelId = await slackHandler.findConversation("trading-test");
-    const feeRate = 0.0003;
-    const tempInitialBalance = 100;
-    const ticker = "APTBUSD";
-    const tickerWithSlash = "APT/BUSD";
-    const currency = "BUSD";
-    const timeframe = "15m";
 
     // flags
     let isRoundLog = false;
@@ -58,7 +58,6 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
     // 티커로 오더 히스토리 받고, 이전 오더 중 제일 마지막-최신 오더 확인 (해당 티커는 매뉴얼로 사이드 건드리지 말아야함!)
     const orderHistory = await binanceHandler.fetchClosedOrders(tickerWithSlash);
     if (orderHistory.length === 0) {
-      console.log(0);
       initialOrder = true;
     }
     if (initialOrder || orderHistory.length > 0) {
@@ -104,7 +103,6 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
 
         //
       } else if (initialOrder || (lastOrder.remaining === 0 && lastOrder.reduceOnly)) {
-        console.log(1);
         // 포지션 엔트리 로깅 데이터 생성. 이전 pnl이 +면 라운드 엔트리 생성.
         const k = (await binanceHandler.getStochRSI(14, ticker, timeframe)).k;
         const adx = (await binanceHandler.getADX(12, ticker, timeframe)).adx;
@@ -143,6 +141,7 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
 
             // set leverage, make 3 orders;
             await binanceHandler.setLeverage(leverage, ticker);
+            console.log("New Order Delivered!");
             console.log(leverage, price, amount, amount * price, newSide);
             console.log(tpPrice, slPrice, normalRatio, 1 + normalRatio / leverage, 1 - normalRatio / leverage);
             const order = await binanceHandler.createOrder(ticker, "market", newSide, amount);
@@ -156,7 +155,6 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
               reduceOnly: true,
             });
 
-            console.log(2);
             // Position Open 로깅 데이터 생성
             positionRowData.Type = "Entry";
             positionRowData.Side = newSide;
@@ -173,7 +171,6 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
           }
         }
       } else {
-        console.log(8);
         return;
       }
     }
@@ -205,8 +202,6 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
       positionRowData["Position #"] = positionNumber;
       positionRowData["Round #"] = roundNumber;
       positionRowData.Datetime = now.toLocaleString("kr-KR", { hour12: false });
-
-      console.log(4);
 
       // excel
       await excelHandler.addRow("Position Logs", positionRowData);
@@ -259,7 +254,6 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
 
       const chatAttachment = slackHandler.createChatAttachment(contentText, positionRowData.Side === "SELL" ? "#58D68D" : "#DC7633");
 
-      console.log(5);
       //
       await slackHandler.publishMessage(slackChannelId, chatAlarm, chatAttachment);
     }
@@ -272,7 +266,6 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
       roundRowData.Vault = (await binanceHandler.fetchBalance({ type: "spot" }))[currency].free.toFixed(2);
       roundRowData.Datetime = now.toLocaleString("kr-KR", { hour12: false });
 
-      console.log(6);
       // excel
       await excelHandler.addRow("Round Logs", roundRowData);
 
@@ -288,10 +281,10 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
 
       const chatAttachment = slackHandler.createChatAttachment(contentText, positionRowData.Side === "SELL" ? "#2eeb84" : "#e85100");
 
-      console.log(7);
       await slackHandler.publishMessage(slackChannelId, chatAlarm, chatAttachment);
     }
   } catch (err) {
+    await slackHandler.publishText(slackChannelId, "Error Alert!!!");
     console.error(`Error in martingaleWork (${new Date()}): ${err}`);
   }
 };
