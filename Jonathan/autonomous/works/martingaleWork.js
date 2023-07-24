@@ -139,7 +139,7 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
           const maxBorder = i === 0 ? Math.max(tempInitialBalance * 0.865 ** i, remainingBalance) : tempInitialBalance * 0.865 ** i;
           if (minBorder <= remainingBalance && remainingBalance <= maxBorder) {
             // TODO: Stage 이후 추가
-            positionRowData["Stage #"] = i;
+            positionRowData["Stage #"] = i + 1;
 
             // amount 결정하고, sltp 결정
             const targetBalance = tempInitialBalance * 1.0103 * 0.865 ** i;
