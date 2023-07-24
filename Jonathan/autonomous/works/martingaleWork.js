@@ -71,7 +71,12 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
       const lastOrder = orderHistory[orderHistory.length - 1];
       const secondLastOrder = orderHistory[orderHistory.length - 2];
       if (!initialOrder && +lastOrder.info.updateTime >= new Date().getTime() - period && lastOrder.reduceOnly) {
-        await binanceHandler.cancelAllOrders(tickerWithSlash);
+        try {
+          await binanceHandler.cancelAllOrders(tickerWithSlash);
+        } catch (error) {
+          console.error(error);
+          await binanceHandler.cancelAllOrders(tickerWithSlash);
+        }
 
         // pnl 계산
         const openOrder = secondLastOrder;
@@ -378,7 +383,11 @@ function smallestDivisor(num, min, max) {
   while (true) {
     const result = num / i;
     if (result >= min && result <= max) {
-      return i;
+      if (i === 1) {
+        return 2;
+      } else {
+        return i;
+      }
     }
     i++;
   }
