@@ -2,7 +2,7 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
   const now = new Date();
   const slackChannelId = await slackHandler.findConversation("trading-test");
   const feeRate = 0.0003;
-  const tempInitialBalance = 83.1;
+  const tempInitialBalance = 83;
   const ticker = "XRPBUSD";
   const tickerWithSlash = "XRP/BUSD";
   const currency = "BUSD";
@@ -68,7 +68,7 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
       const remainingBalance = (await binanceHandler.fetchBalance({ currency, type: "future" }))[currency].free;
       const lastOrder = orderHistory[orderHistory.length - 1];
       const secondLastOrder = orderHistory[orderHistory.length - 2];
-      if (!initialOrder && lastOrder.timestamp >= new Date().getTime() - 5000 && lastOrder.remaining === 0 && lastOrder.reduceOnly) {
+      if (!initialOrder && lastOrder.info.updateTime >= new Date().getTime() - 5000 && lastOrder.reduceOnly) {
         await binanceHandler.cancelAllOrders(tickerWithSlash);
 
         // pnl 계산
@@ -81,9 +81,12 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
 
         const isBuy = openOrder.side === "buy";
 
+        const openFee = openPrice * quantity * feeRate;
         const closeFee = closePrice * quantity * feeRate;
 
         let pnl = (closePrice - openPrice) * (isBuy ? 1 : -1) * quantity - closeFee;
+        console.log("Position Closed.");
+        console.log(pnl, remainingBalance - tempInitialBalance, openFee, closeFee);
 
         // vault 옮기기
         if (pnl > 0) {
