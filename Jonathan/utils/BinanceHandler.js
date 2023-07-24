@@ -88,6 +88,27 @@ class BinanceHandler {
     return res;
   }
 
+  async closeAllPositions(ticker) {
+    try {
+      // Load markets
+      await this.binanceFuture.loadMarkets();
+      const positions = await this.binanceFuture.fetchPositionsRisk();
+
+      for (const position of positions) {
+        const symbol = position.symbol;
+        const side = position.positionAmt > 0 ? "sell" : "buy";
+        const amount = Math.abs(position.positionAmt);
+
+        if (amount > 0 && symbol === ticker) {
+          await this.binanceFuture.createOrder(symbol, "market", side, amount, undefined, { reduceOnly: true });
+          console.log(`Instant Closing Position placed for ${ticker}.`);
+        }
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
   async setLeverage(leverage, symbol) {
     const res = await this.binanceFuture.setLeverage(leverage, symbol);
     return res;
