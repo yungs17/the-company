@@ -249,7 +249,7 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
       const contentText = `*[Position ${isPositionClosed === false ? "Entry" : "Exit"} #${positionRowData["Position #"]}]*${
         isPositionClosed === false
           ? "\nAmount: $" +
-            positionRowData["Entry Liquidity"].toFixed(2) +
+            positionRowData["Entry Liquidity"] +
             " (" +
             (positionRowData["Entry Liquidity"] / positionRowData.Leverage).toFixed(2) +
             ")"
