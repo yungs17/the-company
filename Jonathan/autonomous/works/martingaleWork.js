@@ -284,7 +284,7 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
           : "\nSuccess: " +
             positionRowData.Success +
             "\nPNL: $" +
-            positionRowData.PNL.toFixed(2) +
+            positionRowData.PNL +
             "(" +
             (positionRowData["%"] * 100).toFixed(2) +
             "%)"
