@@ -68,7 +68,7 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
       const remainingBalance = (await binanceHandler.fetchBalance({ currency, type: "future" }))[currency].free;
       const lastOrder = orderHistory[orderHistory.length - 1];
       const secondLastOrder = orderHistory[orderHistory.length - 2];
-      if (!initialOrder && lastOrder.info.updateTime >= new Date().getTime() - 5000 && lastOrder.reduceOnly) {
+      if (!initialOrder && +lastOrder.info.updateTime >= new Date().getTime() - 5000 && lastOrder.reduceOnly) {
         await binanceHandler.cancelAllOrders(tickerWithSlash);
 
         // pnl 계산
