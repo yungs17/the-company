@@ -2,6 +2,7 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
   const now = new Date();
   const slackPositionChannelId = await slackHandler.findConversation("positions-test");
   const slackRoundChannelId = await slackHandler.findConversation("rounds-test");
+  const slackErrorChannelId = await slackHandler.findConversation("errors-test");
   const feeRate = 0.0003;
   const tempInitialBalance = 80;
   const ticker = "XRPBUSD";
@@ -327,9 +328,9 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
 
       await slackHandler.publishMessage(slackRoundChannelId, chatAlarm, chatAttachment);
     }
-  } catch (err) {
-    await slackHandler.publishText(slackPositionChannelId, "Error Alert!!!");
-    console.error(`Error in martingaleWork (${new Date()}): ${err}`);
+  } catch (error) {
+    await slackHandler.publishText(slackErrorChannelId, `*[Error Alert]*\n${error.toString()}`);
+    console.error(`Error in martingaleWork (${new Date()}): ${error}`);
   }
 };
 
