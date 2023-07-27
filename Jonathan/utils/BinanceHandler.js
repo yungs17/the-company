@@ -58,7 +58,7 @@ class BinanceHandler {
   }
 
   async fetchClosedOrders(ticker) {
-    const result = await this.binanceFuture.fetchClosedOrders(ticker);
+    const result = await this.binanceFuture.fetchClosedOrders(ticker, undefined, 4);
     return result;
   }
 

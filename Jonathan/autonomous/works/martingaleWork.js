@@ -4,7 +4,7 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
   const slackRoundChannelId = await slackHandler.findConversation("rounds-test");
   // const slackErrorChannelId = await slackHandler.findConversation("errors-test");
   const feeRate = 0.0003;
-  const tempInitialBalance = 94;
+  const tempInitialBalance = 100;
   const ticker = "SOLBUSD";
   const tickerWithSlash = "SOL/BUSD";
   const currency = "BUSD";
@@ -148,9 +148,10 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
             positionRowData["Stage #"] = i + 1;
 
             // amount 결정하고, sltp 결정
-            const targetBalance = tempInitialBalance * 1.0103 * 0.865 ** i;
+            const targetBalance = tempInitialBalance * 1.0112 * 0.865 ** i;
             const normalRatio = targetBalance / remainingBalance - 1;
             const leverage = Math.min(smallestDivisor(normalRatio, tagetVolatilityMin, tagetVolatilityMax), 19);
+
             try {
               await binanceHandler.setLeverage(leverage, ticker);
 
