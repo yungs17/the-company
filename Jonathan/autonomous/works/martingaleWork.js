@@ -71,6 +71,7 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
       const remainingBalance = (await binanceHandler.fetchBalance({ currency, type: "future" }))[currency].free;
       const lastOrder = orderHistory[orderHistory.length - 1];
       const secondLastOrder = orderHistory[orderHistory.length - 2];
+      //
       if (!initialOrder && +lastOrder.info.updateTime >= new Date().getTime() - period && lastOrder.reduceOnly) {
         try {
           await binanceHandler.cancelAllOrders(tickerWithSlash);
@@ -119,7 +120,7 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
         isPositionClosed = true;
 
         //
-      } else if (initialOrder || (lastOrder.remaining === 0 && lastOrder.reduceOnly)) {
+      } else if (initialOrder || (lastOrder.remaining === 0 && lastOrder.reduceOnly) || remainingBalance > tempInitialBalance * 0.9) {
         isPositionLog = true;
         // 포지션 엔트리 로깅 데이터 생성. 이전 pnl이 +면 라운드 엔트리 생성.
         const k = (await binanceHandler.getStochRSI(14, ticker, timeframe)).k;
