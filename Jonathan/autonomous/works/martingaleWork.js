@@ -4,13 +4,13 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
   const slackRoundChannelId = await slackHandler.findConversation("rounds-test");
   // const slackErrorChannelId = await slackHandler.findConversation("errors-test");
   const feeRate = 0.0003;
-  const tempInitialBalance = 90;
-  const ticker = "XRPBUSD";
-  const tickerWithSlash = "XRP/BUSD";
+  const tempInitialBalance = 94;
+  const ticker = "SOLBUSD";
+  const tickerWithSlash = "SOL/BUSD";
   const currency = "BUSD";
   const timeframe = "15m";
   const tagetVolatilityMin = 0.0;
-  const tagetVolatilityMax = 0.0088;
+  const tagetVolatilityMax = 0.009;
   const period = 60000; // 60 sec
 
   try {
