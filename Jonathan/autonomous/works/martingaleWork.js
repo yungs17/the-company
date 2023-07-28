@@ -98,7 +98,7 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
         console.log(pnl, remainingBalance - tempInitialBalance, openFee, closeFee);
 
         // vault 옮기기
-        if (pnl > 0) {
+        if (pnl > 0 && remainingBalance > tempInitialBalance) {
           if (remainingBalance > tempInitialBalance) {
             pnl = remainingBalance - tempInitialBalance;
           }
