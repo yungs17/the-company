@@ -4,14 +4,14 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
   const slackRoundChannelId = await slackHandler.findConversation("rounds-test");
   // const slackErrorChannelId = await slackHandler.findConversation("errors-test");
   const feeRate = 0.0003;
-  const tempInitialBalance = 100;
-  const ticker = "SOLBUSD";
-  const tickerWithSlash = "SOL/BUSD";
+  const tempInitialBalance = 103;
+  const ticker = "XRPBUSD";
+  const tickerWithSlash = "XRP/BUSD";
   const currency = "BUSD";
   const timeframe = "15m";
   const tagetVolatilityMin = 0.0;
-  const tagetVolatilityMax = 0.009;
-  const period = 60000; // 60 sec
+  const tagetVolatilityMax = 0.005;
+  const period = 60000 * 30; // 60 sec, order와 order 사이의 시간 간격
 
   try {
     // 스크립트처럼 돌아가야함 1회성.
@@ -120,7 +120,7 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
         isPositionClosed = true;
 
         //
-      } else if (initialOrder || (lastOrder.remaining === 0 && lastOrder.reduceOnly) || remainingBalance > tempInitialBalance * 0.9) {
+      } else if (initialOrder || (lastOrder.remaining === 0 && lastOrder.reduceOnly) || remainingBalance > tempInitialBalance * 0.99) {
         isPositionLog = true;
         // 포지션 엔트리 로깅 데이터 생성. 이전 pnl이 +면 라운드 엔트리 생성.
         const k = (await binanceHandler.getStochRSI(14, ticker, timeframe)).k;
@@ -141,80 +141,161 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
         const isBuy = newSide === "buy";
         const contraNewSide = isBuy ? "sell" : "buy";
 
-        for (let i = 0; i < 4; i++) {
-          const minBorder = tempInitialBalance * 0.865 ** (i + 1);
-          const maxBorder = i === 0 ? Math.max(tempInitialBalance * 0.865 ** i, remainingBalance) : tempInitialBalance * 0.865 ** i;
-          if (minBorder <= remainingBalance && remainingBalance <= maxBorder) {
-            // TODO: Stage 이후 추가
-            positionRowData["Stage #"] = i + 1;
+        const positionRows = await excelHandler.getRows("Position Logs");
 
-            // amount 결정하고, sltp 결정
-            const targetBalance = tempInitialBalance * 1.0112 * 0.865 ** i;
-            const normalRatio = targetBalance / remainingBalance - 1;
-            const leverage = Math.min(smallestDivisor(normalRatio, tagetVolatilityMin, tagetVolatilityMax), 19);
+        const lastRow = positionRows[positionRows.length - 1];
+        let lastStage = lastRow["Stage #"];
+        let lastRound = lastRow["Round #"];
 
-            try {
-              await binanceHandler.setLeverage(leverage, ticker);
-
-              const amount = +((remainingBalance * 0.995 * (1 - feeRate)) / price) * leverage;
-
-              const order = await binanceHandler.createOrder(ticker, "market", newSide, amount);
-              price = order.price;
-
-              const tpPrice = isBuy ? price * (1 + normalRatio / leverage) : price * (1 - normalRatio / leverage);
-              const slPrice = isBuy ? price * (1 - normalRatio / leverage) : price * (1 + normalRatio / leverage);
-
-              const tpOrder = await binanceHandler.createOrder(ticker, "take_profit_market", contraNewSide, amount, tpPrice, {
-                stopPrice: tpPrice,
-                reduceOnly: true,
-              });
-              const slOrder = await binanceHandler.createOrder(ticker, "stop_market", contraNewSide, amount, slPrice, {
-                stopPrice: slPrice,
-                reduceOnly: true,
-              });
-
-              console.log("New Order Delivered!");
-              console.log(
-                leverage,
-                price,
-                amount.toFixed(2),
-                (amount * price).toFixed(2),
-                ((amount * price) / leverage).toFixed(2),
-                newSide
-              );
-              console.log(
-                tpPrice.toFixed(2),
-                slPrice.toFixed(2),
-                (normalRatio / leverage).toFixed(2),
-                (1 + normalRatio / leverage).toFixed(2),
-                (1 - normalRatio / leverage).toFixed(2)
-              );
-
-              // Position Open 로깅 데이터 생성
-              positionRowData.Type = "Entry";
-              positionRowData.Side = newSide;
-              positionRowData.Price = price;
-              positionRowData["Entry Liquidity"] = order.cost.toFixed(2);
-              positionRowData.Leverage = leverage;
-              positionRowData.TP = tpOrder.stopPrice;
-              positionRowData.TPPercent = normalRatio * (isBuy ? 1 : -1);
-              positionRowData.SL = slOrder.stopPrice;
-              positionRowData.SLPercent = normalRatio * (isBuy ? -1 : 1);
-              positionRowData.Data = `Leverage: ${leverage}  TP: ${tpOrder.stopPrice}  SL: ${slOrder.stopPrice}  Weights: ${
-                " (" + positionRowData.BuyWeight.toFixed(2) + " : " + positionRowData.SellWeight.toFixed(2) + ")"
-              } `;
-            } catch (error) {
-              await slackHandler.publishText(slackPositionChannelId, "*Error During Order Delivery! Closing Every Position...*");
-              await binanceHandler.closeAllPositions(tickerWithSlash);
-              await binanceHandler.cancelAllOrders(tickerWithSlash);
-              console.error(error);
-              return;
-            }
-
-            isPositionLog = true;
-            break;
-          }
+        if (positionRows.length === 0) {
+          lastStage = 1;
+          lastRound = 1;
         }
+
+        if (lastRow.Success === "FALSE") {
+          let cntFailure = 0;
+
+          positionRows.forEach((row) => {
+            if (row["Round #"] === lastRound && row.Success === "FALSE") {
+              cntFailure += 1;
+            }
+          });
+
+          positionRowData["Stage #"] = cntFailure === 3 ? lastStage + 1 : lastStage;
+          const targetBalance = cntFailure === 3 ? tempInitialBalance * 0.865 ** lastStage : tempInitialBalance * 0.865 ** (lastStage - 1);
+          const normalRatio = targetBalance / remainingBalance - 1;
+          const leverage = Math.min(smallestDivisor(normalRatio, tagetVolatilityMin, tagetVolatilityMax), 19);
+
+          try {
+            await binanceHandler.setLeverage(leverage, ticker);
+
+            const amount = +((remainingBalance * 0.995 * (1 - feeRate)) / price) * leverage;
+
+            const order = await binanceHandler.createOrder(ticker, "market", newSide, amount);
+            price = order.price;
+
+            const tpPrice = isBuy ? price * (1 + normalRatio / leverage) : price * (1 - normalRatio / leverage);
+            const slPrice = isBuy ? price * (1 - normalRatio / leverage) : price * (1 + normalRatio / leverage);
+
+            const tpOrder = await binanceHandler.createOrder(ticker, "take_profit_market", contraNewSide, amount, tpPrice, {
+              stopPrice: tpPrice,
+              reduceOnly: true,
+            });
+            const slOrder = await binanceHandler.createOrder(ticker, "stop_market", contraNewSide, amount, slPrice, {
+              stopPrice: slPrice,
+              reduceOnly: true,
+            });
+
+            console.log("New Order Delivered!");
+            console.log(leverage, price, amount.toFixed(2), (amount * price).toFixed(2), ((amount * price) / leverage).toFixed(2), newSide);
+            console.log(
+              tpPrice.toFixed(2),
+              slPrice.toFixed(2),
+              (normalRatio / leverage).toFixed(2),
+              (1 + normalRatio / leverage).toFixed(2),
+              (1 - normalRatio / leverage).toFixed(2)
+            );
+
+            // Position Open 로깅 데이터 생성
+            positionRowData.Type = "Entry";
+            positionRowData.Side = newSide;
+            positionRowData.Price = price;
+            positionRowData["Entry Liquidity"] = order.cost.toFixed(2);
+            positionRowData.Leverage = leverage;
+            positionRowData.TP = tpOrder.stopPrice;
+            positionRowData.TPPercent = normalRatio * (isBuy ? 1 : -1);
+            positionRowData.SL = slOrder.stopPrice;
+            positionRowData.SLPercent = normalRatio * (isBuy ? -1 : 1);
+            positionRowData.Data = `Leverage: ${leverage}  TP: ${tpOrder.stopPrice}  SL: ${slOrder.stopPrice}  Weights: ${
+              " (" + positionRowData.BuyWeight.toFixed(2) + " : " + positionRowData.SellWeight.toFixed(2) + ")"
+            } `;
+          } catch (error) {
+            await slackHandler.publishText(slackPositionChannelId, "*Error During Order Delivery! Closing Every Position...*");
+            await binanceHandler.closeAllPositions(tickerWithSlash);
+            await binanceHandler.cancelAllOrders(tickerWithSlash);
+            console.error(error);
+            return;
+          }
+
+          isPositionLog = true;
+
+          return;
+        }
+
+        // for (let i = 0; i < 4; i++) {
+        //   const minBorder = tempInitialBalance * 0.865 ** (i + 1);
+        //   const maxBorder = i === 0 ? Math.max(tempInitialBalance * 0.865 ** i, remainingBalance) : tempInitialBalance * 0.865 ** i;
+        //   if (minBorder <= remainingBalance && remainingBalance <= maxBorder) {
+        //     // TODO: Stage 이후 추가
+        //     positionRowData["Stage #"] = i + 1;
+
+        //     // amount 결정하고, sltp 결정
+        //     const targetBalance = tempInitialBalance * 1.0112 * 0.865 ** i;
+        //     const normalRatio = targetBalance / remainingBalance - 1;
+        //     const leverage = Math.min(smallestDivisor(normalRatio, tagetVolatilityMin, tagetVolatilityMax), 19);
+
+        //     try {
+        //       await binanceHandler.setLeverage(leverage, ticker);
+
+        //       const amount = +((remainingBalance * 0.995 * (1 - feeRate)) / price) * leverage;
+
+        //       const order = await binanceHandler.createOrder(ticker, "market", newSide, amount);
+        //       price = order.price;
+
+        //       const tpPrice = isBuy ? price * (1 + normalRatio / leverage) : price * (1 - normalRatio / leverage);
+        //       const slPrice = isBuy ? price * (1 - normalRatio / leverage) : price * (1 + normalRatio / leverage);
+
+        //       const tpOrder = await binanceHandler.createOrder(ticker, "take_profit_market", contraNewSide, amount, tpPrice, {
+        //         stopPrice: tpPrice,
+        //         reduceOnly: true,
+        //       });
+        //       const slOrder = await binanceHandler.createOrder(ticker, "stop_market", contraNewSide, amount, slPrice, {
+        //         stopPrice: slPrice,
+        //         reduceOnly: true,
+        //       });
+
+        //       console.log("New Order Delivered!");
+        //       console.log(
+        //         leverage,
+        //         price,
+        //         amount.toFixed(2),
+        //         (amount * price).toFixed(2),
+        //         ((amount * price) / leverage).toFixed(2),
+        //         newSide
+        //       );
+        //       console.log(
+        //         tpPrice.toFixed(2),
+        //         slPrice.toFixed(2),
+        //         (normalRatio / leverage).toFixed(2),
+        //         (1 + normalRatio / leverage).toFixed(2),
+        //         (1 - normalRatio / leverage).toFixed(2)
+        //       );
+
+        //       // Position Open 로깅 데이터 생성
+        //       positionRowData.Type = "Entry";
+        //       positionRowData.Side = newSide;
+        //       positionRowData.Price = price;
+        //       positionRowData["Entry Liquidity"] = order.cost.toFixed(2);
+        //       positionRowData.Leverage = leverage;
+        //       positionRowData.TP = tpOrder.stopPrice;
+        //       positionRowData.TPPercent = normalRatio * (isBuy ? 1 : -1);
+        //       positionRowData.SL = slOrder.stopPrice;
+        //       positionRowData.SLPercent = normalRatio * (isBuy ? -1 : 1);
+        //       positionRowData.Data = `Leverage: ${leverage}  TP: ${tpOrder.stopPrice}  SL: ${slOrder.stopPrice}  Weights: ${
+        //         " (" + positionRowData.BuyWeight.toFixed(2) + " : " + positionRowData.SellWeight.toFixed(2) + ")"
+        //       } `;
+        //     } catch (error) {
+        //       await slackHandler.publishText(slackPositionChannelId, "*Error During Order Delivery! Closing Every Position...*");
+        //       await binanceHandler.closeAllPositions(tickerWithSlash);
+        //       await binanceHandler.cancelAllOrders(tickerWithSlash);
+        //       console.error(error);
+        //       return;
+        //     }
+
+        //     isPositionLog = true;
+        //     break;
+        //   }
+        // }
       } else {
         return;
       }
@@ -332,7 +413,7 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
     }
   } catch (error) {
     // await slackHandler.publishText(slackErrorChannelId, `*[Error Alert]*\n${error.toString()}`);
-    console.error(`Error in martingaleWork (${new Date()}): ${error}`);
+    // console.error(`Error in martingaleWork (${new Date()}): ${error}`);
   }
 };
 

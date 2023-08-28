@@ -27,6 +27,25 @@ class ExcelHandler {
     }
   }
 
+  async getRows(worksheetTitle) {
+    try {
+      await this.doc.useServiceAccountAuth({
+        client_email: this.spreadSheetEmail,
+        private_key: this.privateKey,
+      });
+
+      await this.doc.loadInfo();
+      const worksheet = this.doc.sheetsByTitle[worksheetTitle];
+
+      const rows = await worksheet.getRows();
+
+      return rows;
+    } catch (error) {
+      console.error(Date() + "\n");
+      console.error(error);
+    }
+  }
+
   async getLastRow(worksheetTitle) {
     try {
       await this.doc.useServiceAccountAuth({
