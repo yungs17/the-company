@@ -11,7 +11,7 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
   const timeframe = "15m";
   const tagetVolatilityMin = 0.0;
   const tagetVolatilityMax = 0.005;
-  const period = 60000 * 15; // 60 sec, order와 order 사이의 시간 간격
+  const period = 60000 * 30; // 60 sec, order와 order 사이의 시간 간격, cron과 맞춰줘야함
 
   try {
     // 스크립트처럼 돌아가야함 1회성.
@@ -121,7 +121,6 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
 
         //
       } else if (initialOrder || (lastOrder.remaining === 0 && lastOrder.reduceOnly) || remainingBalance > tempInitialBalance * 0.99) {
-        isPositionLog = true;
         // 포지션 엔트리 로깅 데이터 생성. 이전 pnl이 +면 라운드 엔트리 생성.
         const k = (await binanceHandler.getStochRSI(14, ticker, timeframe)).k;
         const adx = (await binanceHandler.getADX(12, ticker, timeframe)).adx;
@@ -144,17 +143,19 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
         const positionRows = await excelHandler.getRows("Position Logs");
 
         const lastRow = positionRows[positionRows.length - 1];
-        let lastStage = lastRow["Stage #"];
-        let lastRound = lastRow["Round #"];
-
+        let lastStage;
+        let lastRound;
         if (positionRows.length === 0) {
           lastStage = 1;
           lastRound = 1;
+        } else {
+          lastStage = lastRow["Stage #"];
+          lastRound = lastRow["Round #"];
         }
 
         let cntFailure = 0;
 
-        if (lastRow.Success === "FALSE") {
+        if (positionRows.length !== 0 && lastRow.Success === "FALSE") {
           positionRows.forEach((row) => {
             if (row["Round #"] === lastRound && row.Success === "FALSE") {
               cntFailure += 1;
@@ -163,7 +164,8 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
         }
 
         positionRowData["Stage #"] = cntFailure === 3 ? lastStage + 1 : lastStage;
-        const targetBalance = cntFailure === 3 ? tempInitialBalance * 0.865 ** lastStage : tempInitialBalance * 0.865 ** (lastStage - 1);
+        const targetBalance =
+          cntFailure === 3 ? tempInitialBalance * 1.012 * 0.865 ** lastStage : tempInitialBalance * 1.012 * 0.865 ** (lastStage - 1);
         const normalRatio = targetBalance / remainingBalance - 1;
         const leverage = Math.min(smallestDivisor(normalRatio, tagetVolatilityMin, tagetVolatilityMax), 19);
 
@@ -188,13 +190,21 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
           });
 
           console.log("New Order Delivered!");
-          console.log(leverage, price, amount.toFixed(2), (amount * price).toFixed(2), ((amount * price) / leverage).toFixed(2), newSide);
           console.log(
-            tpPrice.toFixed(2),
-            slPrice.toFixed(2),
-            (normalRatio / leverage).toFixed(2),
-            (1 + normalRatio / leverage).toFixed(2),
-            (1 - normalRatio / leverage).toFixed(2)
+            leverage,
+            price,
+            amount.toFixed(2),
+            (amount * price).toFixed(2),
+            ((amount * price) / leverage).toFixed(2),
+            targetBalance,
+            newSide
+          );
+          console.log(
+            tpPrice.toFixed(4),
+            slPrice.toFixed(4),
+            (normalRatio / leverage).toFixed(4),
+            (1 + normalRatio / leverage).toFixed(4),
+            (1 - normalRatio / leverage).toFixed(4)
           );
 
           // Position Open 로깅 데이터 생성
@@ -211,16 +221,14 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
             " (" + positionRowData.BuyWeight.toFixed(2) + " : " + positionRowData.SellWeight.toFixed(2) + ")"
           } `;
         } catch (error) {
+          console.error(error);
           await slackHandler.publishText(slackPositionChannelId, "*Error During Order Delivery! Closing Every Position...*");
           await binanceHandler.closeAllPositions(tickerWithSlash);
           await binanceHandler.cancelAllOrders(tickerWithSlash);
-          console.error(error);
           return;
         }
 
         isPositionLog = true;
-
-        return;
 
         // for (let i = 0; i < 4; i++) {
         //   const minBorder = tempInitialBalance * 0.865 ** (i + 1);
@@ -413,7 +421,7 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
     }
   } catch (error) {
     // await slackHandler.publishText(slackErrorChannelId, `*[Error Alert]*\n${error.toString()}`);
-    // console.error(`Error in martingaleWork (${new Date()}): ${error}`);
+    console.error(`Error in martingaleWork (${new Date()}): ${error}`);
   }
 };
 
