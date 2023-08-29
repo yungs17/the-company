@@ -321,6 +321,7 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
           positionNumber = +lastRow["Position #"] + 1;
         } else {
           positionNumber = +lastRow["Position #"];
+          positionRowData["Stage #"] = +lastRow["Stage #"];
         }
 
         if (+lastRow.PNL > 0) {
