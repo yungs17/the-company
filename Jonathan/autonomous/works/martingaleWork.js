@@ -5,8 +5,8 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
   // const slackErrorChannelId = await slackHandler.findConversation("errors-test");
   const feeRate = 0.0003;
   const tempInitialBalance = 103;
-  const ticker = "XRPBUSD";
-  const tickerWithSlash = "XRP/BUSD";
+  const ticker = "BTCBUSD";
+  const tickerWithSlash = "BTC/BUSD";
   const currency = "BUSD";
   const timeframe = "15m";
   const tagetVolatilityMin = 0.0;
