@@ -4,14 +4,15 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
   const slackRoundChannelId = await slackHandler.findConversation("rounds-test");
   // const slackErrorChannelId = await slackHandler.findConversation("errors-test");
   const feeRate = 0.0003;
-  const tempInitialBalance = 103;
+  const tempInitialBalance = 100;
   const ticker = "BTCBUSD";
   const tickerWithSlash = "BTC/BUSD";
   const currency = "BUSD";
   const timeframe = "15m";
   const tagetVolatilityMin = 0.0;
-  const tagetVolatilityMax = 0.005;
-  const period = 60000 * 30; // 60 sec, order와 order 사이의 시간 간격, cron과 맞춰줘야함
+  const tagetVolatilityMax = 0.0068;
+  // const period = 5000;
+  const period = 60000 * 15; // 60 sec, order와 order 사이의 시간 간격, cron과 맞춰줘야함
 
   try {
     // 스크립트처럼 돌아가야함 1회성.
@@ -163,9 +164,20 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
           });
         }
 
-        positionRowData["Stage #"] = cntFailure === 3 ? lastStage + 1 : lastStage;
+        let calStage = 1;
+
+        for (let i = 0; i < 4; i++) {
+          const minBorder = tempInitialBalance * 0.855 ** (i + 1);
+          const maxBorder = i === 0 ? Math.max(tempInitialBalance * 0.855 ** i, remainingBalance) : tempInitialBalance * 0.855 ** i;
+          if (minBorder <= remainingBalance && remainingBalance <= maxBorder) {
+            calStage = i + 1;
+          }
+        }
+
+        positionRowData["Stage #"] = cntFailure === 4 ? lastStage + 1 : calStage;
+
         const targetBalance =
-          cntFailure === 3 ? tempInitialBalance * 1.012 * 0.865 ** lastStage : tempInitialBalance * 1.012 * 0.865 ** (lastStage - 1);
+          cntFailure === 4 ? tempInitialBalance * 1.012 * 0.855 ** lastStage : tempInitialBalance * 1.012 * 0.855 ** (lastStage - 1);
         const normalRatio = targetBalance / remainingBalance - 1;
         const leverage = Math.min(smallestDivisor(normalRatio, tagetVolatilityMin, tagetVolatilityMax), 19);
 
@@ -177,8 +189,8 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
           const order = await binanceHandler.createOrder(ticker, "market", newSide, amount);
           price = order.price;
 
-          const tpPrice = isBuy ? price * (1 + normalRatio / leverage) : price * (1 - normalRatio / leverage);
-          const slPrice = isBuy ? price * (1 - normalRatio / leverage) : price * (1 + normalRatio / leverage);
+          const tpPrice = isBuy ? price * (1 + (normalRatio + 0.001) / leverage) : price * (1 - (normalRatio + 0.001) / leverage);
+          const slPrice = isBuy ? price * (1 - (normalRatio - 0.002) / leverage) : price * (1 + (normalRatio - 0.002) / leverage);
 
           const tpOrder = await binanceHandler.createOrder(ticker, "take_profit_market", contraNewSide, amount, tpPrice, {
             stopPrice: tpPrice,

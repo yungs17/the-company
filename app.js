@@ -35,7 +35,7 @@ const binanceHandler = new BinanceHandler(config.binanceConfig);
   // jonathan cron
   const toadScheduler = new toadSchedule.ToadScheduler();
   const toadTask = new toadSchedule.Task("Jonathan working", processTasks);
-  const toadJob = new toadSchedule.SimpleIntervalJob({ seconds: 60 * 30 }, toadTask);
+  const toadJob = new toadSchedule.SimpleIntervalJob({ seconds: 60 * 15 }, toadTask);
   toadScheduler.addSimpleIntervalJob(toadJob);
 
   console.log("⚡️Jonathan On...\n");
