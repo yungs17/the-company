@@ -150,8 +150,8 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
           lastStage = 1;
           lastRound = 1;
         } else {
-          lastStage = lastRow["Stage #"];
-          lastRound = lastRow["Round #"];
+          lastStage = +lastRow["Stage #"];
+          lastRound = +lastRow["Round #"];
         }
 
         let cntFailure = 0;
