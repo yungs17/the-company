@@ -177,7 +177,7 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
         positionRowData["Stage #"] = cntFailure === 4 ? lastStage + 1 : calStage;
 
         const targetBalance =
-          cntFailure === 4 ? tempInitialBalance * 1.012 * 0.855 ** lastStage : tempInitialBalance * 1.012 * 0.855 ** (lastStage - 1);
+          cntFailure === 4 ? tempInitialBalance * 1.012 * 0.855 ** lastStage : tempInitialBalance * 1.012 * 0.855 ** (calStage - 1);
         const normalRatio = targetBalance / remainingBalance - 1;
         const leverage = Math.min(smallestDivisor(normalRatio, tagetVolatilityMin, tagetVolatilityMax), 19);
 
