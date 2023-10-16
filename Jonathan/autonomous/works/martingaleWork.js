@@ -4,7 +4,7 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
   const slackRoundChannelId = await slackHandler.findConversation("rounds-test");
   // const slackErrorChannelId = await slackHandler.findConversation("errors-test");
   const feeRate = 0.0005;
-  const tempInitialBalance = 50;
+  const tempInitialBalance = 52;
   const ticker = "SOLUSDT";
   const tickerWithSlash = "SOL/USDT";
   const currency = "USDT";
