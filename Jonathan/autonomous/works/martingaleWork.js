@@ -3,16 +3,16 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
   const slackPositionChannelId = await slackHandler.findConversation("positions-test");
   const slackRoundChannelId = await slackHandler.findConversation("rounds-test");
   // const slackErrorChannelId = await slackHandler.findConversation("errors-test");
-  const feeRate = 0.0003;
-  const tempInitialBalance = 100;
-  const ticker = "BTCBUSD";
-  const tickerWithSlash = "BTC/BUSD";
-  const currency = "BUSD";
+  const feeRate = 0.0005;
+  const tempInitialBalance = 50;
+  const ticker = "SOLUSDT";
+  const tickerWithSlash = "SOL/USDT";
+  const currency = "USDT";
   const timeframe = "15m";
   const tagetVolatilityMin = 0.0;
   const tagetVolatilityMax = 0.0068;
   // const period = 5000;
-  const period = 60000 * 15; // 60 sec, order와 order 사이의 시간 간격, cron과 맞춰줘야함
+  const period = 60000; // 60 sec, order와 order 사이의 시간 간격, cron과 맞춰줘야함
 
   try {
     // 스크립트처럼 돌아가야함 1회성.
