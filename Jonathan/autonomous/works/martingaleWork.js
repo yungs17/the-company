@@ -63,6 +63,7 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
     // 처리: 안됐으면 가중치 계산, 사이드 정하고, 오더 넣고 Position/Round Entry 로깅 데이터 생성.
     // 후처리: excelHandler 배치 로깅
 
+    console.log("Heartbeat");
     // 티커로 오더 히스토리 받고, 이전 오더 중 제일 마지막-최신 오더 확인 (해당 티커는 매뉴얼로 사이드 건드리지 말아야함!)
     const orderHistory = await binanceHandler.fetchClosedOrders(tickerWithSlash);
     if (orderHistory.length === 0) {
@@ -182,6 +183,7 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
         const leverage = Math.min(smallestDivisor(normalRatio, tagetVolatilityMin, tagetVolatilityMax), 19);
 
         try {
+          console.log("Transaction Tunnel");
           await binanceHandler.setLeverage(leverage, ticker);
 
           const amount = +((remainingBalance * 0.995 * (1 - feeRate)) / price) * leverage;
@@ -320,6 +322,8 @@ const martingaleWork = async (slackHandler, excelHandler, binanceHandler) => {
         return;
       }
     }
+
+    console.log("Log Tunnel");
 
     let roundNumber = 1;
 
