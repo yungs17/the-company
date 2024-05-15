@@ -43,11 +43,10 @@ serverApp.listen(PORT, () => {
   const processTasks = async () => {
     // const tasks = await dbHandler.getAllTasks();
     // const tasks = [new Task(-1, TaskType.MARTINGALE, TaskWhen.ALWAYS, { slackHandler, excelHandler, binanceHandler }, Date.now())];
-    const tasks = [new Task(-1, TaskType.MARTINGALE, TaskWhen.ALWAYS, { binanceHandler }, Date.now())];
-
-    tasks.forEach(async (task) => {
-      await taskHandler.runTask(task);
-    });
+    // const tasks = [new Task(-1, TaskType.MARTINGALE, TaskWhen.ALWAYS, { binanceHandler }, Date.now())];
+    // tasks.forEach(async (task) => {
+    //   await taskHandler.runTask(task);
+    // });
     // console.log(tasks);
   };
 
